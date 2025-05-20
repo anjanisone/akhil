@@ -1,36 +1,27 @@
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from app.utils.CostShareCalculator import HealthInsurancePlan  # ✅ import from utils
+from starlette.status import HTTP_400_BAD_REQUEST
+from app.utils.CostShareCalculator import HealthInsurancePlan
+from app.schemas.cost_estimation_input import CostEstimationInput  # ✅ your external model
 
 router = APIRouter()
 
-class CostEstimationInput(BaseModel):
-    service_cost: float
-    is_service_covered: bool
-    benefit_limitation: float | None
-    deductible_code_exists: bool
-    cost_share_copay: float
-    cost_share_coinsurance: float
-    oopmax_i_calculated: float
-    oopmax_f_calculated: float
-    di_calculated: float
-    df_calculated: float
-    limit_calculated_value: float
-    limit_type: str
+@router.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    formatted_errors = []
+    for error in exc.errors():
+        field_path = ".".join(str(loc) for loc in error["loc"] if loc != "body")
+        message = error["msg"]
+        formatted_errors.append({
+            "field": field_path,
+            "message": message
+        })
 
-    # Plan-level configuration
-    copay: float
-    coinsurance_rate: float
-    copay_applies_oopmax: bool
-    coins_applies_oopmax: bool
-    deductible_applies_oopmax: bool
-    copay_continue_deductible_met: bool
-    copay_continue_oopmax_met: bool
-    copay_count_to_deductible: bool
-    is_deductible_before_copay: bool
-    d_calculated: float
-    oopmax_calculated: float
+    return JSONResponse(
+        status_code=HTTP_400_BAD_REQUEST,
+        content={"errors": formatted_errors}
+    )
 
 
 @router.post("/estimate", status_code=status.HTTP_200_OK)
