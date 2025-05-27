@@ -36,9 +36,7 @@ async def request_validation_exception_handler(request: Request, exc: RequestVal
             "message": "Additional details"
         }
     )
-
-
-app.include_router(router, prefix="/cost-estimator", tags=["cost-estimator"])
+app.include_router(router, prefix="/cost-estimator", tags=["Cost Estimation"])
 
 @app.get("/")
 def read_root():

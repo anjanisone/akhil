@@ -10,9 +10,15 @@ router = APIRouter()
 
 
 def get_headers(
-    access_token: Optional[str] = Cookie(None),
-    x_correlation_id: Optional[str] = Header(None),
-    x_client_ref_id: Optional[str] = Header(None)
+    access_token: Optional[str] = Cookie(
+        None, description="Access token sent as a cookie"
+    ),
+    x_correlation_id: Optional[str] = Header(
+        None, description="Correlation ID for downstream traceability"
+    ),
+    x_client_ref_id: Optional[str] = Header(
+        None, description="Client App ID (e.g., AetnaHealth)"
+    )
 ) -> Dict[str, Optional[str]]:
     return {
         "access_token": access_token,
@@ -21,7 +27,27 @@ def get_headers(
     }
 
 
-@router.post("/membercost/v1/estimate/search/retrieve")
+@router.post(
+    "/membercost/v1/estimate/search/retrieve",
+    summary="Retrieve cost estimate for member",
+    description="""
+Retrieves cost estimation data for a specific member based on input service, provider, and benefit parameters.
+
+### Headers:
+- **access_token** (cookie): Bearer token for authentication  
+- **x-correlation-id** (header): Trace ID for API transaction tracking  
+- **x-client-ref-id** (header): App ID from the client for source identification  
+
+### Request Body:
+Expects a JSON payload matching the `CostEstimatorRequest` schema.
+
+### Response:
+- **200 OK**: Cost estimation result  
+- **400 Bad Request**: Malformed input or missing fields with detailed error mapping  
+""",
+    response_description="Returns success status and input reflection",
+    tags=["Cost Estimation"]
+)
 async def estimate_cost(
     payload: CostEstimatorRequest,
     request: Request,
