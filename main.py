@@ -7,11 +7,10 @@ from fastapi import Request
 from uuid import uuid4
 from cost_estimator import router  # Import your router module
 
-
 app = FastAPI()
 
 @app.exception_handler(RequestValidationError)
-async def request_validation_exception_handler(request: Request, exc: RequestValidationError):
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
     try:
         body = await request.json()
     except:
@@ -19,10 +18,12 @@ async def request_validation_exception_handler(request: Request, exc: RequestVal
 
     correlation_id = request.headers.get("x-correlation-id") or str(uuid4())
 
-    error_dict = {
-        ".".join(str(loc) for loc in err["loc"]): err["msg"]
-        for err in exc.errors()
-    }
+    # Build error dictionary for all fields (missing or invalid)
+    error_dict = {}
+    for err in exc.errors():
+        field_path = ".".join(str(loc) for loc in err["loc"])
+        message = err["msg"]
+        error_dict[field_path] = message
 
     return JSONResponse(
         status_code=HTTP_400_BAD_REQUEST,
@@ -32,10 +33,12 @@ async def request_validation_exception_handler(request: Request, exc: RequestVal
             "title": "One or more validation errors occurred",
             "status": 400,
             "detail": "Malformed request",
-            "errors": str(error_dict).replace("'", '"'),  # stringified JSON
-            "message": "Additional details"
+            "errors": str(error_dict).replace("'", '"'),  # required by your standard
+            "message": "Additional details",
+            "requestBody": body
         }
     )
+
 app.include_router(router, prefix="/cost-estimator", tags=["Cost Estimation"])
 
 @app.get("/")
