@@ -1,16 +1,18 @@
 from fastapi import FastAPI
-from fastapi import APIRouter
 from fastapi import Request
-from cost_estimator import router  # Import your router module
+from cost_estimator import router
+from app.core.exception_handler import include_exceptions
+from app.core.exception_responses import responses
 
-from exception_handlers import include_exceptions  # Import the exception setup
+app = FastAPI(
+    title="Cost Estimator API",
+    description="Handles input validation and formats structured error responses.",
+    version="1.0.0",
+    responses=responses
+)
 
-app = FastAPI()
-
-# Include all exception handlers
 include_exceptions(app)
 
-# Include your business router
 app.include_router(router, prefix="/cost-estimator", tags=["Cost Estimation"])
 
 @app.get("/")
