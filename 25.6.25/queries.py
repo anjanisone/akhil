@@ -10,6 +10,18 @@ RATE_QUERIES = {
           AND product_cd = :product_cd
     """,
 
+    "get_standard_rate_without_pbg": """
+        SELECT MAX(rate)
+        FROM cet_rates
+        WHERE service_cd = :service_cd
+          AND service_type_cd = :service_type_cd
+          AND rate_system_cd = 'REF'
+          AND product_cd = :product_cd
+          AND geographic_area_cd = :geographic_area_cd
+          AND place_of_service_cd = :place_of_service_cd
+          AND contract_type = 'S'
+    """,
+
     "get_out_of_network_rate": """
         SELECT RATE, SERVICE_CD, PROVIDER_BUSINESS_GROUP_NBR,
                PLACE_OF_SERVICE_CD, PRODUCT_CD
