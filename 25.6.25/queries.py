@@ -39,7 +39,7 @@ RATE_QUERIES = {
           AND product_cd = :product_cd
     """,
 
-    "get_claim_max_rate": """
+    "get_max_claim_rate": """
         SELECT 
             MAX(c.rate) AS RATE
         FROM 
@@ -53,9 +53,13 @@ RATE_QUERIES = {
             AND c.SERVICE_TYPE_CD = :service_type_cd
     """,
 
-    "get_provider_fallback_info": """
+    "get_provider_info": """
         SELECT DISTINCT 
-            PROVIDER_BUSINESS_GROUP_NBR, PRODUCT_CD
+            PROVIDER_BUSINESS_GROUP_NBR,
+            PRODUCT_CD,
+            RATING_SYSTEM_CD,
+            PROVIDER_BUSINESS_GROUP_NBR,
+            EPDB_GEOGRAPHIC_AREA_CD
         FROM 
             anbc-hcb-dev.prv_ps_ce_dec_hcb_dev.CET_PROVIDERS p
         WHERE 
