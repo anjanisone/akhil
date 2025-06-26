@@ -21,21 +21,12 @@ class CostEstimatorRepositoryImpl(CostEstimatorRepositoryInterface):
         """
         Retrieve the rate based on network status and criteria.
         """
-        # Try claim-based rate first
-        params = {
-            "provider_identification_nbr": rate_criteria.providerIdentificationNumber,
-            "service_location_nbr": rate_criteria.serviceLocationNumber,
-            "network_id": rate_criteria.networkId,
-            "place_of_service_cd": rate_criteria.placeOfServiceCode,
-            "service_cd": rate_criteria.serviceCode,
-            "service_type_cd": rate_criteria.serviceType
-        }
-
-        claim_result = await self._get_claim_based_rate(params)
+        # Try max claim-based rate first
+        claim_result = await self._get_max_claim_based_rate(rate_criteria)
         if claim_result and len(claim_result) > 0 and claim_result[0].get("RATE") is not None:
             return float(claim_result[0]["RATE"])
 
-        # If not found, try non-standard rate (from provider)
+        # Try non-standard rate
         provider_params = {
             "provider_identification_nbr": rate_criteria.providerIdentificationNumber,
             "service_location_nbr": rate_criteria.serviceLocationNumber,
@@ -46,47 +37,55 @@ class CostEstimatorRepositoryImpl(CostEstimatorRepositoryInterface):
         if non_standard_result and len(non_standard_result) > 0 and non_standard_result[0].get("RATE") is not None:
             return float(non_standard_result[0]["RATE"])
 
-        # If still not found, try standard rate
-        standard_result = await self._get_standard_rate(params)
+        # Try standard rate with/without PBG
+        if rate_criteria.providerBusinessGroupNumber:
+            standard_result = await self._get_standard_rate_with_pbg(rate_criteria)
+        else:
+            standard_result = await self._get_standard_rate_without_pbg(rate_criteria)
+
         if standard_result and len(standard_result) > 0 and standard_result[0].get("RATE") is not None:
             return float(standard_result[0]["RATE"])
 
-        # Default rate if all fails
+        # Default fallback
         return 100.0
 
-    async def _get_claim_based_rate(self, params):
-        claim_query = RATE_QUERIES.get("get_claim_based_rate")
-        return await self.db.execute_query(claim_query, params)
+    async def _get_max_claim_based_rate(self, criteria):
+        query = RATE_QUERIES.get("get_max_claim_rate")
+        params = {
+            "provider_identification_nbr": criteria.providerIdentificationNumber,
+            "network_id": criteria.networkId,
+            "service_location_nbr": criteria.serviceLocationNumber,
+            "place_of_service_cd": criteria.placeOfServiceCode,
+            "service_cd": criteria.serviceCode,
+            "service_type_cd": criteria.serviceType
+        }
+        return await self.db.execute_query(query, params)
 
     async def _get_non_standard_rate(self, params):
-        non_standard_query = RATE_QUERIES.get("get_non_standard_rate")
-        return await self.db.execute_query(non_standard_query, params)
+        query = RATE_QUERIES.get("get_non_standard_rate")
+        return await self.db.execute_query(query, params)
 
-    async def _get_standard_rate(self, params):
-        standard_query = RATE_QUERIES.get("get_standard_rate")
-        return await self.db.execute_query(standard_query, params)
-    
-    async def get_max_claim_rate(self, rate_criteria: CostEstimatorRateCriteria) -> float:
-        """
-        Retrieve the maximum claim rate based on the provided criteria.
-        """
+    async def _get_standard_rate_with_pbg(self, criteria):
+        query = RATE_QUERIES.get("get_standard_rate")
         params = {
-            "provider_identification_nbr": rate_criteria.providerIdentificationNumber,
-            "network_id": rate_criteria.networkId,
-            "service_location_nbr": rate_criteria.serviceLocationNumber,
-            "place_of_service_cd": rate_criteria.placeOfServiceCode,
-            "service_cd": rate_criteria.serviceCode,
-            "service_type_cd": rate_criteria.serviceType
+            "service_cd": criteria.serviceCode,
+            "provider_business_group_nbr": criteria.providerBusinessGroupNumber,
+            "place_of_service_cd": criteria.placeOfServiceCode,
+            "product_cd": criteria.productCode
         }
+        return await self.db.execute_query(query, params)
 
-        max_claim_query = RATE_QUERIES.get("get_max_claim_rate")
-        result = await self.db.execute_query(max_claim_query, params)
-        
-        if result and len(result) > 0 and result[0].get("RATE") is not None:
-            return float(result[0]["RATE"])
-        
-        return 0.0
-    
+    async def _get_standard_rate_without_pbg(self, criteria):
+        query = RATE_QUERIES.get("get_standard_rate_without_pbg")
+        params = {
+            "service_cd": criteria.serviceCode,
+            "service_type_cd": criteria.serviceType,
+            "product_cd": criteria.productCode,
+            "geographic_area_cd": criteria.geographicAreaCode,
+            "place_of_service_cd": criteria.placeOfServiceCode
+        }
+        return await self.db.execute_query(query, params)
+
     async def get_provider_info(self, rate_criteria: CostEstimatorRateCriteria) -> dict:
         """
         Retrieve provider information based on the provided criteria.
@@ -94,16 +93,10 @@ class CostEstimatorRepositoryImpl(CostEstimatorRepositoryInterface):
         params = {
             "provider_identification_nbr": rate_criteria.providerIdentificationNumber,
             "service_location_nbr": rate_criteria.serviceLocationNumber,
-            "network_id": rate_criteria.networkId,
-            "place_of_service_cd": rate_criteria.placeOfServiceCode,
-            "service_cd": rate_criteria.serviceCode,
-            "service_type_cd": rate_criteria.serviceType
+            "network_id": rate_criteria.networkId
         }
 
-        provider_query = RATE_QUERIES.get("get_provider_info")
-        result = await self.db.execute_query(provider_query, params)
+        query = RATE_QUERIES.get("get_provider_info")
+        result = await self.db.execute_query(query, params)
         
-        if result and len(result) > 0:
-            return result[0]
-        
-        return {}
+        return result[0] if result and len(result) > 0 else {}
