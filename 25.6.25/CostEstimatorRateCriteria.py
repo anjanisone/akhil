@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 @dataclass
 class CostEstimatorRateCriteria:
@@ -14,10 +15,12 @@ class CostEstimatorRateCriteria:
         placeOfServiceCode: Code representing the place of service
         zipCode: ZIP code of the service location
     """
-    providerIdentificationNumber: str
-    serviceLocationNumber: str
-    networkId: str
-    serviceCode: str
-    serviceType: str
-    placeOfServiceCode: str
-    zipCode: str
+    service_cd: str
+    product_cd: str
+    place_of_service_cd: str
+    provider_business_group_nbr: Optional[str]
+    geographic_area_cd: Optional[str]
+    service_type_cd: Optional[str]
+    provider_identification_nbr: Optional[str]
+    network_id: Optional[str]
+    service_location_nbr: Optional[str]
