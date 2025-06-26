@@ -65,3 +65,45 @@ class CostEstimatorRepositoryImpl(CostEstimatorRepositoryInterface):
     async def _get_standard_rate(self, params):
         standard_query = RATE_QUERIES.get("get_standard_rate")
         return await self.db.execute_query(standard_query, params)
+    
+    async def get_max_claim_rate(self, rate_criteria: CostEstimatorRateCriteria) -> float:
+        """
+        Retrieve the maximum claim rate based on the provided criteria.
+        """
+        params = {
+            "provider_identification_nbr": rate_criteria.providerIdentificationNumber,
+            "network_id": rate_criteria.networkId,
+            "service_location_nbr": rate_criteria.serviceLocationNumber,
+            "place_of_service_cd": rate_criteria.placeOfServiceCode,
+            "service_cd": rate_criteria.serviceCode,
+            "service_type_cd": rate_criteria.serviceType
+        }
+
+        max_claim_query = RATE_QUERIES.get("get_max_claim_rate")
+        result = await self.db.execute_query(max_claim_query, params)
+        
+        if result and len(result) > 0 and result[0].get("RATE") is not None:
+            return float(result[0]["RATE"])
+        
+        return 0.0
+    
+    async def get_provider_info(self, rate_criteria: CostEstimatorRateCriteria) -> dict:
+        """
+        Retrieve provider information based on the provided criteria.
+        """
+        params = {
+            "provider_identification_nbr": rate_criteria.providerIdentificationNumber,
+            "service_location_nbr": rate_criteria.serviceLocationNumber,
+            "network_id": rate_criteria.networkId,
+            "place_of_service_cd": rate_criteria.placeOfServiceCode,
+            "service_cd": rate_criteria.serviceCode,
+            "service_type_cd": rate_criteria.serviceType
+        }
+
+        provider_query = RATE_QUERIES.get("get_provider_info")
+        result = await self.db.execute_query(provider_query, params)
+        
+        if result and len(result) > 0:
+            return result[0]
+        
+        return {}
